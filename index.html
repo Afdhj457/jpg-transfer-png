@@ -294,7 +294,35 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    /* 滚动条美化 */
+    /* 音量开关按钮 */
+    .sound-toggle {
+      background: transparent;
+      border: 1px solid #e2e8f0;
+      border-radius: 40px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      margin-left: auto;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .sound-toggle:hover {
+      background: #f1f5f9;
+    }
+    .sound-toggle.muted {
+      opacity: 0.5;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
     .preview-area::-webkit-scrollbar {
       width: 6px;
     }
@@ -310,12 +338,15 @@
 </head>
 <body>
   <div class="card">
-    <h1>
-      JPG → PNG
-      <span class="format-badge">Converter</span>
-    </h1>
+    <div class="header-row">
+      <h1>
+        JPG → PNG
+        <span class="format-badge">Converter</span>
+      </h1>
+      <button class="sound-toggle" id="soundToggle" title="开启/关闭音效">🔊</button>
+    </div>
     <div class="subhead">
-      ⚡ 纯浏览器转换 · 无需上传 · 支持单独保存
+      ⚡ 纯浏览器转换 · 无需上传 · 支持单独保存 · 音效反馈
     </div>
 
     <!-- 拖拽 / 点击 上传区 -->
@@ -356,13 +387,96 @@
 
   <script>
     (function(){
+      // ---------- 音效引擎 (Web Audio API) ----------
+      let audioCtx = null;
+      let soundEnabled = true;
+
+      function initAudio() {
+        if (!audioCtx) {
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (e) {
+            console.warn('Web Audio API 不可用', e);
+          }
+        }
+        // 某些浏览器需要用户手势后恢复
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      // 播放一个简单的音效序列
+      // type: 'add' | 'convert' | 'save' | 'clear' | 'error' | 'complete'
+      function playSound(type) {
+        if (!soundEnabled) return;
+        initAudio();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const gainNode = audioCtx.createGain();
+        gainNode.connect(audioCtx.destination);
+        gainNode.gain.value = 0.15; // 整体音量
+
+        // 根据类型定义音符序列 [频率, 开始偏移, 持续时长]
+        let notes = [];
+        switch(type) {
+          case 'add': // 添加文件: 清脆上行
+            notes = [[523.25, 0, 0.08], [659.25, 0.08, 0.08], [783.99, 0.16, 0.12]];
+            break;
+          case 'convert': // 转换: 科技感
+            notes = [[440, 0, 0.1], [554.37, 0.1, 0.1], [659.25, 0.2, 0.15]];
+            break;
+          case 'save': // 保存: 短促下行
+            notes = [[880, 0, 0.08], [659.25, 0.08, 0.12]];
+            break;
+          case 'clear': // 清空: 低沉
+            notes = [[392, 0, 0.1], [261.63, 0.1, 0.18]];
+            break;
+          case 'error': // 错误: 低沉嗡嗡
+            notes = [[220, 0, 0.15], [174.61, 0.15, 0.2]];
+            break;
+          case 'complete': // 全部完成: 欢快和弦
+            notes = [[523.25, 0, 0.1], [659.25, 0.1, 0.1], [783.99, 0.2, 0.1], [1046.5, 0.3, 0.25]];
+            break;
+          default:
+            notes = [[440, 0, 0.1]];
+        }
+
+        notes.forEach(([freq, startOffset, duration]) => {
+          const osc = audioCtx.createOscillator();
+          const envGain = audioCtx.createGain();
+          osc.type = (type === 'error' || type === 'clear') ? 'sawtooth' : 'sine';
+          osc.frequency.value = freq;
+
+          // 包络
+          envGain.gain.setValueAtTime(0, now + startOffset);
+          envGain.gain.linearRampToValueAtTime(0.25, now + startOffset + 0.01);
+          envGain.gain.exponentialRampToValueAtTime(0.001, now + startOffset + duration);
+
+          osc.connect(envGain);
+          envGain.connect(gainNode);
+          osc.start(now + startOffset);
+          osc.stop(now + startOffset + duration);
+        });
+      }
+
+      // 音效开关
+      const soundToggle = document.getElementById('soundToggle');
+      soundToggle.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+        soundToggle.classList.toggle('muted', !soundEnabled);
+        if (soundEnabled) {
+          // 播放一个轻快的开启音
+          playSound('add');
+        }
+      });
+
       // ---------- 核心变量 ----------
-      // 存储当前所有文件: { id, file, name, size, previewUrl, converted, blob, pngUrl }
       let fileItems = [];
       let nextId = 0;
       let isConverting = false;
 
-      // DOM 元素
       const dropArea = document.getElementById('dropArea');
       const fileInput = document.getElementById('fileInput');
       const previewArea = document.getElementById('previewArea');
@@ -381,6 +495,7 @@
       function setStatus(text, isError = false) {
         statusMsg.innerHTML = isError ? `⚠️ ${text}` : `✨ ${text}`;
         statusMsg.style.color = isError ? '#b91c1c' : '#475569';
+        if (isError) playSound('error');
       }
 
       function resetStatus() {
@@ -415,7 +530,7 @@
         fileItems = [];
         renderPreview();
         updateButtons();
-        setStatus('等待添加 JPG 图片...');
+        setStatus('已清空所有文件');
       }
 
       function updateButtons() {
@@ -433,7 +548,6 @@
         }
       }
 
-      // ---------- 渲染预览列表（增加单独保存按钮）----------
       function renderPreview() {
         previewArea.innerHTML = '';
 
@@ -450,14 +564,12 @@
           row.className = 'file-row';
           row.dataset.id = item.id;
 
-          // 缩略图
           const img = document.createElement('img');
           img.className = 'thumb';
           img.src = item.previewUrl;
           img.alt = item.name;
           img.loading = 'lazy';
 
-          // 文件信息
           const infoDiv = document.createElement('div');
           infoDiv.className = 'file-info';
 
@@ -473,12 +585,11 @@
           infoDiv.appendChild(nameDiv);
           infoDiv.appendChild(sizeDiv);
 
-          // 状态徽章
           const badge = document.createElement('span');
           badge.className = `badge ${item.converted ? 'success' : ''}`;
           badge.textContent = item.converted ? '已转PNG' : '待转换';
 
-          // ★ 单独保存按钮
+          // 单独保存按钮
           const saveBtn = document.createElement('button');
           saveBtn.className = 'btn-save-one';
           saveBtn.innerHTML = '⬇️ 保存';
@@ -501,7 +612,6 @@
         });
       }
 
-      // ---------- 添加文件 ----------
       function addFiles(files) {
         const jpgFiles = Array.from(files).filter(file => 
           file.type === 'image/jpeg' || 
@@ -540,13 +650,14 @@
           });
         });
 
+        // 播放添加音效
+        playSound('add');
         renderPreview();
         updateButtons();
         resetStatus();
         fileInput.value = '';
       }
 
-      // ---------- 转换单个文件 ----------
       function convertToPng(item) {
         return new Promise((resolve, reject) => {
           if (item.converted && item.blob) {
@@ -595,7 +706,6 @@
         });
       }
 
-      // ---------- 批量转换 ----------
       async function convertAll() {
         if (isConverting) return;
         const unconverted = fileItems.filter(item => !item.converted);
@@ -607,6 +717,8 @@
         isConverting = true;
         updateButtons();
         setStatus(`正在转换 ${unconverted.length} 个文件...`);
+        // 播放开始转换音效
+        playSound('convert');
 
         let successCount = 0;
         let failCount = 0;
@@ -615,7 +727,7 @@
           try {
             await convertToPng(item);
             successCount++;
-            renderPreview(); // 实时更新徽章和保存按钮
+            renderPreview();
           } catch (err) {
             console.error(err);
             failCount++;
@@ -628,12 +740,12 @@
 
         if (failCount === 0) {
           setStatus(`✅ 成功转换 ${successCount} 个文件，可单独或批量保存`);
+          playSound('complete');
         } else {
           setStatus(`⚠️ ${successCount} 个成功，${failCount} 个失败`, true);
         }
       }
 
-      // ---------- 保存单个 PNG（供行内按钮调用）----------
       function downloadSinglePng(item) {
         if (!item.converted || !item.blob) {
           setStatus(`文件 ${item.name} 尚未转换`, true);
@@ -647,9 +759,9 @@
         a.click();
         document.body.removeChild(a);
         setStatus(`已保存 ${pngName}`);
+        playSound('save');
       }
 
-      // ---------- 保存全部 ----------
       function downloadAllPng() {
         const convertedItems = fileItems.filter(item => item.converted && item.blob);
         if (convertedItems.length === 0) {
@@ -658,6 +770,7 @@
         }
 
         setStatus(`正在保存 ${convertedItems.length} 个 PNG 文件...`);
+        playSound('save');
         convertedItems.forEach((item, index) => {
           setTimeout(() => {
             const a = document.createElement('a');
@@ -706,17 +819,23 @@
         }
         clearAllFiles();
         updateButtons();
+        playSound('clear');
       });
 
       window.addEventListener('dragover', (e) => e.preventDefault());
       window.addEventListener('drop', (e) => e.preventDefault());
+
+      // 第一次用户交互时初始化音频上下文（浏览器自动播放策略）
+      document.body.addEventListener('click', function initOnFirstClick() {
+        initAudio();
+        document.body.removeEventListener('click', initOnFirstClick);
+      }, { once: true });
 
       // 初始化
       updateButtons();
       renderPreview();
       setStatus('等待添加 JPG 图片...');
 
-      // 页面卸载释放资源
       window.addEventListener('beforeunload', () => {
         fileItems.forEach(item => {
           if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
