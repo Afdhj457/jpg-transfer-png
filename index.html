@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JPG 转 PNG · 在线转换器</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f7f9fc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 720px;
+      padding: 28px 30px 32px;
+      transition: box-shadow 0.2s ease;
+    }
+    .card:hover {
+      box-shadow: 0 30px 55px -12px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 1.9rem;
+      letter-spacing: -0.02em;
+      color: #0b1a2e;
+      margin-bottom: 6px;
+    }
+    h1 .format-badge {
+      font-size: 0.9rem;
+      font-weight: 500;
+      background: #eef2f6;
+      padding: 4px 12px;
+      border-radius: 40px;
+      color: #1e3a5f;
+      letter-spacing: 0.01em;
+    }
+    .subhead {
+      color: #475569;
+      margin-bottom: 28px;
+      font-size: 1rem;
+      border-left: 3px solid #94a3b8;
+      padding-left: 14px;
+      background: #f1f5f9;
+      border-radius: 0 8px 8px 0;
+      line-height: 1.4;
+      padding: 10px 14px;
+    }
+    .drop-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 24px;
+      background: #fafcff;
+      padding: 34px 20px;
+      text-align: center;
+      transition: all 0.2s;
+      cursor: pointer;
+      margin-bottom: 18px;
+    }
+    .drop-area.drag-over {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      transform: scale(1.01);
+    }
+    .drop-area input[type="file"] {
+      display: none;
+    }
+    .drop-icon {
+      font-size: 48px;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .drop-text {
+      font-weight: 500;
+      color: #1e293b;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+    .drop-hint {
+      color: #64748b;
+      font-size: 0.9rem;
+      background: #eef2f6;
+      display: inline-block;
+      padding: 5px 16px;
+      border-radius: 30px;
+    }
+    .preview-area {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 20px 0 16px;
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 12px 16px;
+      transition: background 0.2s;
+    }
+    .file-row:hover {
+      background: #f8fafc;
+    }
+    .thumb {
+      width: 54px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .file-name {
+      font-weight: 500;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.95rem;
+    }
+    .file-size {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 30px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .badge.success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+    .btn {
+      border: none;
+      border-radius: 50px;
+      padding: 14px 26px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      background: white;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      flex: 1 0 auto;
+      line-height: 1;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .btn-primary {
+      background: #0b1a2e;
+      border: 1px solid #0b1a2e;
+      color: white;
+      box-shadow: 0 8px 16px -6px rgba(11, 26, 46, 0.25);
+    }
+    .btn-primary:hover {
+      background: #1e2f44;
+      border-color: #1e2f44;
+    }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      border-color: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-secondary:hover {
+      background: #e9eef3;
+    }
+    .btn-download {
+      background: #0f2b45;
+      border: 1px solid #0f2b45;
+      color: white;
+      box-shadow: 0 8px 16px -6px rgba(15, 43, 69, 0.25);
+    }
+    .btn-download:hover {
+      background: #1a3a5c;
+    }
+    .btn-download:disabled {
+      background: #94a3b8;
+      border-color: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .status-msg {
+      font-size: 0.9rem;
+      color: #475569;
+      min-height: 26px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+    }
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      padding: 20px 0 16px;
+      font-size: 0.95rem;
+      font-style: italic;
+    }
+    .hidden {
+      display: none;
+    }
+    .footer-note {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    /* 滚动条美化 */
+    .preview-area::-webkit-scrollbar {
+      width: 6px;
+    }
+    .preview-area::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .preview-area::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>
+      JPG → PNG
+      <span class="format-badge">Converter</span>
+    </h1>
+    <div class="subhead">
+      ⚡ 纯浏览器转换 · 无需上传 · 批量处理
+    </div>
+
+    <!-- 拖拽 / 点击 上传区 -->
+    <div class="drop-area" id="dropArea">
+      <input type="file" id="fileInput" accept=".jpg,.jpeg,image/jpeg" multiple>
+      <div class="drop-icon">🖼️</div>
+      <div class="drop-text">拖拽 JPG 文件到这里，或点击选择</div>
+      <div class="drop-hint">支持 .jpg / .jpeg · 可多选</div>
+    </div>
+
+    <!-- 已选文件预览列表 -->
+    <div class="preview-area" id="previewArea">
+      <div class="empty-state" id="emptyState">还没有选择图片</div>
+    </div>
+
+    <!-- 操作按钮区 -->
+    <div class="action-buttons">
+      <button class="btn btn-primary" id="convertBtn" disabled>
+        <span>🔄</span> 转换为 PNG
+      </button>
+      <button class="btn btn-download" id="downloadAllBtn" disabled>
+        <span>⬇️</span> 保存全部 PNG
+      </button>
+      <button class="btn btn-secondary" id="clearBtn">
+        <span>🗑️</span> 清空
+      </button>
+    </div>
+
+    <!-- 状态提示 -->
+    <div class="status-msg" id="statusMsg">
+      <span>✨ 等待添加 JPG 图片...</span>
+    </div>
+
+    <div class="footer-note">
+      PNG 保留透明通道 · 每个文件独立保存
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // ---------- 核心变量 ----------
+      // 存储当前所有文件的原始对象: { id, file, name, size, previewUrl, converted: false, blob: null, pngUrl: null }
+      let fileItems = [];
+      let nextId = 0;
+      let isConverting = false;
+
+      // DOM 元素
+      const dropArea = document.getElementById('dropArea');
+      const fileInput = document.getElementById('fileInput');
+      const previewArea = document.getElementById('previewArea');
+      const emptyState = document.getElementById('emptyState');
+      const convertBtn = document.getElementById('convertBtn');
+      const downloadAllBtn = document.getElementById('downloadAllBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const statusMsg = document.getElementById('statusMsg');
+
+      // ---------- 辅助函数 ----------
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      }
+
+      // 显示状态信息
+      function setStatus(text, isError = false) {
+        statusMsg.innerHTML = isError ? `⚠️ ${text}` : `✨ ${text}`;
+        if (isError) statusMsg.style.color = '#b91c1c';
+        else statusMsg.style.color = '#475569';
+      }
+
+      // 重置状态
+      function resetStatus() {
+        if (fileItems.length === 0) {
+          setStatus('等待添加 JPG 图片...');
+        } else {
+          const unconverted = fileItems.filter(item => !item.converted).length;
+          const converted = fileItems.filter(item => item.converted).length;
+          if (unconverted === 0 && converted > 0) {
+            setStatus(`全部 ${converted} 个文件已转换，可保存 PNG`);
+          } else if (converted > 0) {
+            setStatus(`${converted} 个已转换，${unconverted} 个待转换`);
+          } else {
+            setStatus(`已加载 ${fileItems.length} 个 JPG，点击「转换为 PNG」`);
+          }
+        }
+      }
+
+      // 清理预览URL和blob (避免内存泄漏)
+      function revokeItemUrls(item) {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+          item.previewUrl = null;
+        }
+        if (item.pngUrl) {
+          URL.revokeObjectURL(item.pngUrl);
+          item.pngUrl = null;
+        }
+      }
+
+      // 清空所有文件并释放内存
+      function clearAllFiles(keepStatus = false) {
+        fileItems.forEach(item => {
+          revokeItemUrls(item);
+        });
+        fileItems = [];
+        renderPreview();
+        if (!keepStatus) {
+          setStatus('等待添加 JPG 图片...');
+        }
+        updateButtons();
+        emptyState.style.display = 'block'; // 由render控制
+      }
+
+      // 更新按钮状态
+      function updateButtons() {
+        const hasFiles = fileItems.length > 0;
+        const hasUnconverted = fileItems.some(item => !item.converted);
+        const hasConverted = fileItems.some(item => item.converted && item.blob);
+
+        convertBtn.disabled = !hasFiles || !hasUnconverted || isConverting;
+        downloadAllBtn.disabled = !hasConverted || isConverting;
+
+        // 动态改变转换按钮文字（如果正在转换）
+        if (isConverting) {
+          convertBtn.innerHTML = `<span class="spinner"></span> 转换中...`;
+        } else {
+          convertBtn.innerHTML = `<span>🔄</span> 转换为 PNG`;
+        }
+      }
+
+      // ---------- 渲染预览列表 ----------
+      function renderPreview() {
+        // 清空 previewArea 但保留空状态div? 更好的方式是重新构建
+        // 但为了简单，我们用 innerHTML 重建，同时保留 emptyState 引用逻辑
+        // 由于 emptyState 是固定id但会被覆盖，所以换一种方式：清空后重新添加emptyState
+        previewArea.innerHTML = '';
+
+        if (fileItems.length === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'empty-state';
+          emptyDiv.textContent = '还没有选择图片';
+          previewArea.appendChild(emptyDiv);
+          return;
+        }
+
+        fileItems.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'file-row';
+          row.dataset.id = item.id;
+
+          // 缩略图（原始JPG预览）
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = item.previewUrl;
+          img.alt = item.name;
+          img.loading = 'lazy';
+
+          // 文件信息
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'file-info';
+
+          const nameDiv = document.createElement('div');
+          nameDiv.className = 'file-name';
+          nameDiv.textContent = item.name;
+          nameDiv.title = item.name;
+
+          const sizeDiv = document.createElement('div');
+          sizeDiv.className = 'file-size';
+          sizeDiv.textContent = formatSize(item.size);
+
+          infoDiv.appendChild(nameDiv);
+          infoDiv.appendChild(sizeDiv);
+
+          // 状态徽章
+          const badge = document.createElement('span');
+          badge.className = `badge ${item.converted ? 'success' : ''}`;
+          badge.textContent = item.converted ? '已转PNG' : '待转换';
+
+          row.appendChild(img);
+          row.appendChild(infoDiv);
+          row.appendChild(badge);
+
+          previewArea.appendChild(row);
+        });
+
+        // 滚动到新加位置? 不用
+      }
+
+      // ---------- 添加文件到列表 ----------
+      function addFiles(files) {
+        const jpgFiles = Array.from(files).filter(file => 
+          file.type === 'image/jpeg' || 
+          file.name.toLowerCase().endsWith('.jpg') || 
+          file.name.toLowerCase().endsWith('.jpeg')
+        );
+
+        if (jpgFiles.length === 0) {
+          setStatus('没有发现有效的 JPG/JPEG 文件', true);
+          return;
+        }
+
+        // 去重 (根据文件名+大小+最后修改时间，简单去重)
+        const existingKeys = new Set(fileItems.map(item => `${item.name}_${item.size}_${item.file.lastModified}`));
+        const newFiles = jpgFiles.filter(file => {
+          const key = `${file.name}_${file.size}_${file.lastModified}`;
+          return !existingKeys.has(key);
+        });
+
+        if (newFiles.length === 0) {
+          setStatus('所选文件均已存在', true);
+          return;
+        }
+
+        newFiles.forEach(file => {
+          const id = nextId++;
+          const previewUrl = URL.createObjectURL(file);
+          fileItems.push({
+            id,
+            file,
+            name: file.name,
+            size: file.size,
+            previewUrl,
+            converted: false,
+            blob: null,
+            pngUrl: null
+          });
+        });
+
+        renderPreview();
+        updateButtons();
+        resetStatus();
+
+        // 清空input，以便再次选择相同文件可触发change
+        fileInput.value = '';
+      }
+
+      // ---------- 转换单个文件为PNG (Promise) ----------
+      function convertToPng(item) {
+        return new Promise((resolve, reject) => {
+          // 如果已经转换过且有blob，直接resolve
+          if (item.converted && item.blob) {
+            resolve(item);
+            return;
+          }
+
+          const img = new Image();
+          const loadUrl = item.previewUrl; // 原始jpg的object URL
+
+          img.onload = function() {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              
+              // 绘制白色背景？PNG支持透明，但JPG没有透明，所以直接绘制即可，保持原样。
+              // 为了确保完全不变，直接绘制图像。
+              ctx.drawImage(img, 0, 0);
+
+              // 转为PNG blob
+              canvas.toBlob((blob) => {
+                if (!blob) {
+                  reject(new Error(`无法转换 ${item.name}`));
+                  return;
+                }
+
+                // 释放旧的pngUrl（如果有）
+                if (item.pngUrl) {
+                  URL.revokeObjectURL(item.pngUrl);
+                }
+
+                const pngUrl = URL.createObjectURL(blob);
+                item.blob = blob;
+                item.pngUrl = pngUrl;
+                item.converted = true;
+
+                // 注意: previewUrl 保持不变，用于缩略图预览(仍显示原始jpg)
+                resolve(item);
+              }, 'image/png', 1.0); // 最高质量
+
+            } catch (err) {
+              reject(err);
+            }
+          };
+
+          img.onerror = function() {
+            reject(new Error(`图片加载失败: ${item.name}`));
+          };
+
+          img.src = loadUrl;
+        });
+      }
+
+      // ---------- 批量转换 ----------
+      async function convertAll() {
+        if (isConverting) return;
+        const unconverted = fileItems.filter(item => !item.converted);
+        if (unconverted.length === 0) {
+          setStatus('所有文件都已转换', false);
+          return;
+        }
+
+        isConverting = true;
+        updateButtons();
+        setStatus(`正在转换 ${unconverted.length} 个文件...`);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const item of unconverted) {
+          try {
+            await convertToPng(item);
+            successCount++;
+            // 每转换一个更新一次预览的徽章
+            renderPreview(); 
+          } catch (err) {
+            console.error(err);
+            failCount++;
+            // 标记转换失败？暂时不改动converted状态，但后续可以改进
+          }
+        }
+
+        isConverting = false;
+        renderPreview();
+        updateButtons();
+
+        if (failCount === 0) {
+          setStatus(`✅ 成功转换 ${successCount} 个文件为 PNG`);
+        } else {
+          setStatus(`⚠️ ${successCount} 个成功，${failCount} 个失败`, true);
+        }
+      }
+
+      // ---------- 保存单个PNG (触发下载) ----------
+      function downloadPngItem(item) {
+        if (!item.converted || !item.blob) {
+          setStatus(`文件 ${item.name} 尚未转换`, true);
+          return;
+        }
+        // 生成下载链接
+        const a = document.createElement('a');
+        a.href = item.pngUrl;
+        // 替换扩展名为 .png
+        const pngName = item.name.replace(/\.(jpe?g)$/i, '.png');
+        a.download = pngName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      // ---------- 保存全部转换后的PNG ----------
+      function downloadAllPng() {
+        const convertedItems = fileItems.filter(item => item.converted && item.blob);
+        if (convertedItems.length === 0) {
+          setStatus('没有已转换的 PNG 文件', true);
+          return;
+        }
+
+        setStatus(`正在保存 ${convertedItems.length} 个 PNG 文件...`);
+        // 逐个触发下载 (为避免浏览器阻止多下载，使用间隔)
+        convertedItems.forEach((item, index) => {
+          setTimeout(() => {
+            downloadPngItem(item);
+            if (index === convertedItems.length - 1) {
+              setStatus(`已触发 ${convertedItems.length} 个 PNG 下载`);
+            }
+          }, index * 150); // 150ms 间隔防止被浏览器拦截
+        });
+      }
+
+      // ---------- 事件绑定 ----------
+      // 点击上传区触发文件选择
+      dropArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      // 文件选择变更
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          addFiles(e.target.files);
+        }
+      });
+
+      // 拖拽事件
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+
+      dropArea.addEventListener('dragenter', () => {
+        dropArea.classList.add('drag-over');
+      });
+      dropArea.addEventListener('dragover', () => {
+        dropArea.classList.add('drag-over');
+      });
+      dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('drag-over');
+      });
+      dropArea.addEventListener('drop', (e) => {
+        dropArea.classList.remove('drag-over');
+        const dt = e.dataTransfer;
+        if (dt.files && dt.files.length > 0) {
+          addFiles(dt.files);
+        }
+      });
+
+      // 转换按钮
+      convertBtn.addEventListener('click', convertAll);
+
+      // 保存全部按钮
+      downloadAllBtn.addEventListener('click', downloadAllPng);
+
+      // 清空按钮
+      clearBtn.addEventListener('click', () => {
+        if (isConverting) {
+          setStatus('正在转换中，请稍后清空', true);
+          return;
+        }
+        clearAllFiles();
+        setStatus('已清空所有文件');
+        updateButtons();
+      });
+
+      // 全局拖拽防止浏览器打开文件
+      window.addEventListener('dragover', (e) => e.preventDefault());
+      window.addEventListener('drop', (e) => e.preventDefault());
+
+      // 初始化按钮状态和UI
+      updateButtons();
+      renderPreview();
+      setStatus('等待添加 JPG 图片...');
+
+      // 页面卸载时释放所有URL
+      window.addEventListener('beforeunload', () => {
+        fileItems.forEach(item => {
+          if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+          if (item.pngUrl) URL.revokeObjectURL(item.pngUrl);
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>
