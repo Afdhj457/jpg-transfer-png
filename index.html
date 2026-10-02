@@ -110,7 +110,7 @@
     .file-row {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: 18px;
@@ -159,6 +159,34 @@
     .badge.success {
       background: #dcfce7;
       color: #166534;
+    }
+    .btn-save-one {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+      border-radius: 30px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .btn-save-one:hover:not(:disabled) {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .btn-save-one:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+    .btn-save-one:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #f8fafc;
     }
     .action-buttons {
       display: flex;
@@ -246,9 +274,6 @@
       font-size: 0.95rem;
       font-style: italic;
     }
-    .hidden {
-      display: none;
-    }
     .footer-note {
       margin-top: 18px;
       text-align: center;
@@ -290,7 +315,7 @@
       <span class="format-badge">Converter</span>
     </h1>
     <div class="subhead">
-      ⚡ 纯浏览器转换 · 无需上传 · 批量处理
+      ⚡ 纯浏览器转换 · 无需上传 · 支持单独保存
     </div>
 
     <!-- 拖拽 / 点击 上传区 -->
@@ -325,14 +350,14 @@
     </div>
 
     <div class="footer-note">
-      PNG 保留透明通道 · 每个文件独立保存
+      PNG 保留透明通道 · 每个文件均可单独保存
     </div>
   </div>
 
   <script>
     (function(){
       // ---------- 核心变量 ----------
-      // 存储当前所有文件的原始对象: { id, file, name, size, previewUrl, converted: false, blob: null, pngUrl: null }
+      // 存储当前所有文件: { id, file, name, size, previewUrl, converted, blob, pngUrl }
       let fileItems = [];
       let nextId = 0;
       let isConverting = false;
@@ -341,7 +366,6 @@
       const dropArea = document.getElementById('dropArea');
       const fileInput = document.getElementById('fileInput');
       const previewArea = document.getElementById('previewArea');
-      const emptyState = document.getElementById('emptyState');
       const convertBtn = document.getElementById('convertBtn');
       const downloadAllBtn = document.getElementById('downloadAllBtn');
       const clearBtn = document.getElementById('clearBtn');
@@ -354,14 +378,11 @@
         return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
       }
 
-      // 显示状态信息
       function setStatus(text, isError = false) {
         statusMsg.innerHTML = isError ? `⚠️ ${text}` : `✨ ${text}`;
-        if (isError) statusMsg.style.color = '#b91c1c';
-        else statusMsg.style.color = '#475569';
+        statusMsg.style.color = isError ? '#b91c1c' : '#475569';
       }
 
-      // 重置状态
       function resetStatus() {
         if (fileItems.length === 0) {
           setStatus('等待添加 JPG 图片...');
@@ -369,7 +390,7 @@
           const unconverted = fileItems.filter(item => !item.converted).length;
           const converted = fileItems.filter(item => item.converted).length;
           if (unconverted === 0 && converted > 0) {
-            setStatus(`全部 ${converted} 个文件已转换，可保存 PNG`);
+            setStatus(`全部 ${converted} 个文件已转换，可单独或批量保存 PNG`);
           } else if (converted > 0) {
             setStatus(`${converted} 个已转换，${unconverted} 个待转换`);
           } else {
@@ -378,7 +399,6 @@
         }
       }
 
-      // 清理预览URL和blob (避免内存泄漏)
       function revokeItemUrls(item) {
         if (item.previewUrl) {
           URL.revokeObjectURL(item.previewUrl);
@@ -390,21 +410,14 @@
         }
       }
 
-      // 清空所有文件并释放内存
-      function clearAllFiles(keepStatus = false) {
-        fileItems.forEach(item => {
-          revokeItemUrls(item);
-        });
+      function clearAllFiles() {
+        fileItems.forEach(item => revokeItemUrls(item));
         fileItems = [];
         renderPreview();
-        if (!keepStatus) {
-          setStatus('等待添加 JPG 图片...');
-        }
         updateButtons();
-        emptyState.style.display = 'block'; // 由render控制
+        setStatus('等待添加 JPG 图片...');
       }
 
-      // 更新按钮状态
       function updateButtons() {
         const hasFiles = fileItems.length > 0;
         const hasUnconverted = fileItems.some(item => !item.converted);
@@ -413,7 +426,6 @@
         convertBtn.disabled = !hasFiles || !hasUnconverted || isConverting;
         downloadAllBtn.disabled = !hasConverted || isConverting;
 
-        // 动态改变转换按钮文字（如果正在转换）
         if (isConverting) {
           convertBtn.innerHTML = `<span class="spinner"></span> 转换中...`;
         } else {
@@ -421,11 +433,8 @@
         }
       }
 
-      // ---------- 渲染预览列表 ----------
+      // ---------- 渲染预览列表（增加单独保存按钮）----------
       function renderPreview() {
-        // 清空 previewArea 但保留空状态div? 更好的方式是重新构建
-        // 但为了简单，我们用 innerHTML 重建，同时保留 emptyState 引用逻辑
-        // 由于 emptyState 是固定id但会被覆盖，所以换一种方式：清空后重新添加emptyState
         previewArea.innerHTML = '';
 
         if (fileItems.length === 0) {
@@ -441,7 +450,7 @@
           row.className = 'file-row';
           row.dataset.id = item.id;
 
-          // 缩略图（原始JPG预览）
+          // 缩略图
           const img = document.createElement('img');
           img.className = 'thumb';
           img.src = item.previewUrl;
@@ -469,17 +478,30 @@
           badge.className = `badge ${item.converted ? 'success' : ''}`;
           badge.textContent = item.converted ? '已转PNG' : '待转换';
 
+          // ★ 单独保存按钮
+          const saveBtn = document.createElement('button');
+          saveBtn.className = 'btn-save-one';
+          saveBtn.innerHTML = '⬇️ 保存';
+          saveBtn.disabled = !item.converted || !item.blob;
+          saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (item.converted && item.blob) {
+              downloadSinglePng(item);
+            } else {
+              setStatus(`文件 ${item.name} 尚未转换`, true);
+            }
+          });
+
           row.appendChild(img);
           row.appendChild(infoDiv);
           row.appendChild(badge);
+          row.appendChild(saveBtn);
 
           previewArea.appendChild(row);
         });
-
-        // 滚动到新加位置? 不用
       }
 
-      // ---------- 添加文件到列表 ----------
+      // ---------- 添加文件 ----------
       function addFiles(files) {
         const jpgFiles = Array.from(files).filter(file => 
           file.type === 'image/jpeg' || 
@@ -492,7 +514,6 @@
           return;
         }
 
-        // 去重 (根据文件名+大小+最后修改时间，简单去重)
         const existingKeys = new Set(fileItems.map(item => `${item.name}_${item.size}_${item.file.lastModified}`));
         const newFiles = jpgFiles.filter(file => {
           const key = `${file.name}_${file.size}_${file.lastModified}`;
@@ -522,22 +543,19 @@
         renderPreview();
         updateButtons();
         resetStatus();
-
-        // 清空input，以便再次选择相同文件可触发change
         fileInput.value = '';
       }
 
-      // ---------- 转换单个文件为PNG (Promise) ----------
+      // ---------- 转换单个文件 ----------
       function convertToPng(item) {
         return new Promise((resolve, reject) => {
-          // 如果已经转换过且有blob，直接resolve
           if (item.converted && item.blob) {
             resolve(item);
             return;
           }
 
           const img = new Image();
-          const loadUrl = item.previewUrl; // 原始jpg的object URL
+          const loadUrl = item.previewUrl;
 
           img.onload = function() {
             try {
@@ -545,19 +563,14 @@
               canvas.width = img.naturalWidth;
               canvas.height = img.naturalHeight;
               const ctx = canvas.getContext('2d');
-              
-              // 绘制白色背景？PNG支持透明，但JPG没有透明，所以直接绘制即可，保持原样。
-              // 为了确保完全不变，直接绘制图像。
               ctx.drawImage(img, 0, 0);
 
-              // 转为PNG blob
               canvas.toBlob((blob) => {
                 if (!blob) {
                   reject(new Error(`无法转换 ${item.name}`));
                   return;
                 }
 
-                // 释放旧的pngUrl（如果有）
                 if (item.pngUrl) {
                   URL.revokeObjectURL(item.pngUrl);
                 }
@@ -566,10 +579,8 @@
                 item.blob = blob;
                 item.pngUrl = pngUrl;
                 item.converted = true;
-
-                // 注意: previewUrl 保持不变，用于缩略图预览(仍显示原始jpg)
                 resolve(item);
-              }, 'image/png', 1.0); // 最高质量
+              }, 'image/png', 1.0);
 
             } catch (err) {
               reject(err);
@@ -604,12 +615,10 @@
           try {
             await convertToPng(item);
             successCount++;
-            // 每转换一个更新一次预览的徽章
-            renderPreview(); 
+            renderPreview(); // 实时更新徽章和保存按钮
           } catch (err) {
             console.error(err);
             failCount++;
-            // 标记转换失败？暂时不改动converted状态，但后续可以改进
           }
         }
 
@@ -618,30 +627,29 @@
         updateButtons();
 
         if (failCount === 0) {
-          setStatus(`✅ 成功转换 ${successCount} 个文件为 PNG`);
+          setStatus(`✅ 成功转换 ${successCount} 个文件，可单独或批量保存`);
         } else {
           setStatus(`⚠️ ${successCount} 个成功，${failCount} 个失败`, true);
         }
       }
 
-      // ---------- 保存单个PNG (触发下载) ----------
-      function downloadPngItem(item) {
+      // ---------- 保存单个 PNG（供行内按钮调用）----------
+      function downloadSinglePng(item) {
         if (!item.converted || !item.blob) {
           setStatus(`文件 ${item.name} 尚未转换`, true);
           return;
         }
-        // 生成下载链接
         const a = document.createElement('a');
         a.href = item.pngUrl;
-        // 替换扩展名为 .png
         const pngName = item.name.replace(/\.(jpe?g)$/i, '.png');
         a.download = pngName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        setStatus(`已保存 ${pngName}`);
       }
 
-      // ---------- 保存全部转换后的PNG ----------
+      // ---------- 保存全部 ----------
       function downloadAllPng() {
         const convertedItems = fileItems.filter(item => item.converted && item.blob);
         if (convertedItems.length === 0) {
@@ -650,31 +658,29 @@
         }
 
         setStatus(`正在保存 ${convertedItems.length} 个 PNG 文件...`);
-        // 逐个触发下载 (为避免浏览器阻止多下载，使用间隔)
         convertedItems.forEach((item, index) => {
           setTimeout(() => {
-            downloadPngItem(item);
+            const a = document.createElement('a');
+            a.href = item.pngUrl;
+            const pngName = item.name.replace(/\.(jpe?g)$/i, '.png');
+            a.download = pngName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
             if (index === convertedItems.length - 1) {
               setStatus(`已触发 ${convertedItems.length} 个 PNG 下载`);
             }
-          }, index * 150); // 150ms 间隔防止被浏览器拦截
+          }, index * 150);
         });
       }
 
       // ---------- 事件绑定 ----------
-      // 点击上传区触发文件选择
-      dropArea.addEventListener('click', () => {
-        fileInput.click();
-      });
+      dropArea.addEventListener('click', () => fileInput.click());
 
-      // 文件选择变更
       fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          addFiles(e.target.files);
-        }
+        if (e.target.files.length > 0) addFiles(e.target.files);
       });
 
-      // 拖拽事件
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, (e) => {
           e.preventDefault();
@@ -682,50 +688,35 @@
         });
       });
 
-      dropArea.addEventListener('dragenter', () => {
-        dropArea.classList.add('drag-over');
-      });
-      dropArea.addEventListener('dragover', () => {
-        dropArea.classList.add('drag-over');
-      });
-      dropArea.addEventListener('dragleave', () => {
-        dropArea.classList.remove('drag-over');
-      });
+      dropArea.addEventListener('dragenter', () => dropArea.classList.add('drag-over'));
+      dropArea.addEventListener('dragover', () => dropArea.classList.add('drag-over'));
+      dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
       dropArea.addEventListener('drop', (e) => {
         dropArea.classList.remove('drag-over');
         const dt = e.dataTransfer;
-        if (dt.files && dt.files.length > 0) {
-          addFiles(dt.files);
-        }
+        if (dt.files && dt.files.length > 0) addFiles(dt.files);
       });
 
-      // 转换按钮
       convertBtn.addEventListener('click', convertAll);
-
-      // 保存全部按钮
       downloadAllBtn.addEventListener('click', downloadAllPng);
-
-      // 清空按钮
       clearBtn.addEventListener('click', () => {
         if (isConverting) {
           setStatus('正在转换中，请稍后清空', true);
           return;
         }
         clearAllFiles();
-        setStatus('已清空所有文件');
         updateButtons();
       });
 
-      // 全局拖拽防止浏览器打开文件
       window.addEventListener('dragover', (e) => e.preventDefault());
       window.addEventListener('drop', (e) => e.preventDefault());
 
-      // 初始化按钮状态和UI
+      // 初始化
       updateButtons();
       renderPreview();
       setStatus('等待添加 JPG 图片...');
 
-      // 页面卸载时释放所有URL
+      // 页面卸载释放资源
       window.addEventListener('beforeunload', () => {
         fileItems.forEach(item => {
           if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
